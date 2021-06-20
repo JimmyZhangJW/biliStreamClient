@@ -59,24 +59,23 @@ type Packet struct {
 
 type BiliClient struct {
 	serverConn      *websocket.Conn
-	UserName        string
 	uid             int
-	Connected       bool
+	connected       bool
 	roomID          int
-	Mutex           *sync.Mutex
+	mutex           *sync.Mutex
 	protocolVersion uint16
-	ch              chan PacketBody
+	Ch              chan PacketBody
 }
 
 func New() *BiliClient {
 	return &BiliClient{
 		serverConn:      nil,
 		uid:             0,
-		Connected:       false,
+		connected:       false,
 		roomID:          0,
-		Mutex:           nil,
+		mutex:           &sync.Mutex{},
 		protocolVersion: 1,
-		ch:              make(chan PacketBody, chanBufferSize), //Give a little bit of buffer to prevent blocking in case of reading slower than writing
+		Ch:              make(chan PacketBody, chanBufferSize), //Give a little bit of buffer to prevent blocking in case of reading slower than writing
 	}
 }
 
@@ -206,16 +205,16 @@ func (bili *BiliClient) sendJoinChannel(channelID int) error {
 
 // update the connected state
 func (bili *BiliClient) SetConnect(connected bool) {
-	bili.Mutex.Lock()
-	bili.Connected = connected
-	bili.Mutex.Unlock()
+	bili.mutex.Lock()
+	bili.connected = connected
+	bili.mutex.Unlock()
 }
 
 // check whether connected
 func (bili *BiliClient) CheckConnect() bool {
-	bili.Mutex.Lock()
-	defer bili.Mutex.Unlock()
-	return bili.Connected
+	bili.mutex.Lock()
+	defer bili.mutex.Unlock()
+	return bili.connected
 }
 
 // Connect the bili client to the bilibili live-stream server
@@ -265,7 +264,7 @@ func (bili *BiliClient) receiveMessages() {
 			log.Fatalln("client receiveMessages " + err.Error())
 		}
 		for _, body := range packet.body {
-			bili.ch <- body
+			bili.Ch <- body
 		}
 	}
 }
