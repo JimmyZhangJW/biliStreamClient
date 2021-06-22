@@ -6,8 +6,17 @@ import (
 	"github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common/profile"
 	tts "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/tts/v20190823"
 	"math"
+	"math/rand"
 	"unicode/utf8"
 )
+const charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+func randString(length int32) string {
+	b := make([]byte, length)
+	for i := range b {
+		b[i] = charset[rand.Int63()%int64(len(charset))]
+	}
+	return string(b)
+}
 
 type VoiceConfig struct {
 	Endpoint  string
@@ -40,6 +49,7 @@ func GetVoiceFromTencentCloud(SecretID string, SecretKey string, voice VoiceConf
 	client, _ := tts.NewClient(credential, voice.Region, cpf)
 
 	request := tts.NewTextToVoiceRequest()
+	request.SessionId = common.StringPtr(randString(68))
 	request.Text = common.StringPtr(message)
 	request.ModelType = common.Int64Ptr(1)
 	request.VoiceType = common.Int64Ptr(voice.VoiceCode)
