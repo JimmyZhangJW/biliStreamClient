@@ -41,22 +41,6 @@ type roomInitResult struct {
 	Msg     string `json:"msg"`
 }
 
-type PacketBody struct {
-	Cmd   string                 `json:"cmd"`
-	Info  []interface{}          `json:"info"`
-	Data  map[string]interface{} `json:"data"`
-	Count int                    `json:"count"`
-}
-
-type Packet struct {
-	packetLen int
-	headerLen int
-	version   int
-	op        int
-	seq       int
-	body      []PacketBody
-}
-
 type BiliClient struct {
 	serverConn      *websocket.Conn
 	uid             int
@@ -160,10 +144,10 @@ func decode(blob []byte) (Packet, error) {
 
 // heartbeatLoop keep heartbeat every 5 seconds with bilibili live-stream server and stay online
 func (bili *BiliClient) heartbeatLoop() {
-	for bili.CheckConnect() {
+	for bili.checkConnect() {
 		err := bili.sendSocketData(0, 16, bili.protocolVersion, 2, 1, "")
 		if err != nil {
-			bili.SetConnect(false)
+			bili.setConnect(false)
 			log.Printf("heartbeatError:%s\r\n", err.Error())
 			return
 		}
@@ -204,14 +188,14 @@ func (bili *BiliClient) sendJoinChannel(channelID int) error {
 }
 
 // update the connected state
-func (bili *BiliClient) SetConnect(connected bool) {
+func (bili *BiliClient) setConnect(connected bool) {
 	bili.mutex.Lock()
 	bili.connected = connected
 	bili.mutex.Unlock()
 }
 
 // check whether connected
-func (bili *BiliClient) CheckConnect() bool {
+func (bili *BiliClient) checkConnect() bool {
 	bili.mutex.Lock()
 	defer bili.mutex.Unlock()
 	return bili.connected
@@ -236,7 +220,7 @@ func (bili *BiliClient) Connect(rid int) error {
 	if err := bili.sendJoinChannel(roomID); err != nil {
 		return errors.New("Cannot send join channel: " + err.Error())
 	}
-	bili.SetConnect(true)
+	bili.setConnect(true)
 
 	go bili.heartbeatLoop()
 	go bili.receiveMessages()
@@ -244,8 +228,8 @@ func (bili *BiliClient) Connect(rid int) error {
 }
 
 func (bili *BiliClient) Disconnect() error {
-	if bili.CheckConnect() {
-		bili.SetConnect(false)
+	if bili.checkConnect() {
+		bili.setConnect(false)
 		if err := bili.serverConn.Close(); err != nil {
 			return err
 		}
@@ -254,7 +238,7 @@ func (bili *BiliClient) Disconnect() error {
 }
 
 func (bili *BiliClient) receiveMessages() {
-	for bili.CheckConnect() {
+	for bili.checkConnect() {
 		_, message, err := bili.serverConn.ReadMessage()
 		if err != nil {
 			log.Fatalln("client receiveMessages " + err.Error())
